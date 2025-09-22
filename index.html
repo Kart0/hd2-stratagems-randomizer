@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Helldivers 2 - Estratagemas Aleatorias</title>
+<style>
+  body{margin:0;font-family:Arial, sans-serif;background:#111;color:#fff;}
+  header{background:#222;padding:10px;display:flex;justify-content:space-between;align-items:center;position:relative;}
+  #toggleMenu{background:#444;color:#fff;border:none;width: 44px;height: 44px;font-size:1.3em;cursor:pointer;border-radius:8px;display: flex;align-items: center;justify-content: center;}
+  
+  /* Título centrado */
+  .page-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+  }
+  
+  /* Botón de aleatorizar */
+  #randomButton {
+    background:#444;
+    color:#fff;
+    border:none;
+    width: 44px;
+    height: 44px;
+    font-size:1.3em;
+    cursor:pointer;
+    border-radius:8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+  
+  #randomButton:hover {
+    opacity: 1;
+  }
+
+  /* Panel lateral */
+  #menu{position:fixed;top:0;left:0;height:100%;width:90%;max-width:400px;background:#1a1a1a;overflow-y:auto;transform:translateX(0);transition:transform .3s ease;padding:20px;z-index:9999;}
+  #menu.hide{transform:translateX(-100%);}
+  .menu-header{display:flex;justify-content:space-between;align-items:center;}
+
+  /* Botones cuadrados en el header del menú - reorganizados en 2 filas */
+  .menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .menu-buttons-row {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  
+  .square-btn {
+    width: 44px;
+    height: 44px;
+    background:#444;
+    border:none;
+    color:#fff;
+    font-size:1.3em;
+    cursor:pointer;
+    border-radius:8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.2s;
+  }
+  
+  .square-btn:hover {
+    background:#555;
+  }
+
+  h2{margin-top:20px;border-bottom:1px solid #444;padding-bottom:5px;cursor:pointer;}
+  .cat-content{margin-top:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:12px;}
+  .cat-content.hide{display:none;}
+
+  /* Estratagema cuadro con borde claro y fondo oscuro */
+  .estratagema{cursor:pointer;background:#1f1f1f;border:3px solid #aaa;border-radius:8px;padding:8px;display:flex;justify-content:center;align-items:center;transition:background .15s,transform .08s;position:relative;}
+  .estratagema:hover{background:#2c2c2c;transform:scale(1.05);}
+  .estratagema img.icon{width:70px;height:70px;object-fit:cover;border-radius:4px;}
+  
+  /* Indicador de selección */
+  .estratagema.selected {
+    border-color: #4CAF50;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+  }
+  
+  .estratagema.selected::after {
+    content: "✓";
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #4CAF50;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+  }
+
+  /* Zona principal - ESCRITORIO */
+  #seleccionadas{margin:20px auto;max-width:1200px;display:grid;gap:20px;padding:20px;grid-template-columns: repeat(1, 1fr);}
+  .card{background:#222;border-radius:10px;padding:10px;box-shadow:0 0 8px #000;display:flex;flex-direction:column;align-items:flex-start;}
+  .fila{width:100%;display:flex;align-items:center;justify-content:space-between;gap:15px;}
+  .fila img.arrow{width:36px;height:36px;margin:0 2px;}
+  .nombre{margin-top:8px;font-size:1.1em;font-weight:bold;width:100%;text-align:left;}
+
+  /* Modal idioma */
+  #langModal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:10000;}
+  #langModal .box{background:#222;padding:18px;border-radius:12px;text-align:center;}
+  #langModal button{margin:8px;padding:10px 18px;font-size:1.05em;cursor:pointer;border:none;border-radius:8px;background:#444;color:white;}
+  #langModal .note{font-size:0.9em;color:#ccc;margin-top:8px;}
+   /* === Espacio extra al final del panel lateral === */
+  #categorias::after {
+    content: "";
+    display: block;
+    height: 60px;   /* agrega 60px de "aire" después de la última categoría */
+  }
+
+  /* Media queries para MÓVIL */
+  @media (max-width: 768px) {
+    header {
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      grid-template-areas: "random title menu";
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+    }
+    
+    #randomButton {
+      grid-area: random;
+      margin-right: 0;
+    }
+    
+    .page-title {
+      grid-area: title;
+      position: static;
+      transform: none;
+      font-size: 1em;
+	  font-weight: bold;
+      margin: 0;
+      text-align: center;
+      display: block !important;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    #toggleMenu {
+      grid-area: menu;
+    }
+    
+    #seleccionadas {
+      grid-template-columns: repeat(1, 1fr);
+      gap: 15px;
+      padding: 15px;
+    }
+    
+    /* Cuando hay más de 5 tarjetas en móvil */
+    #seleccionadas.mas-de-5 {
+      grid-template-columns: repeat(2, 1fr);
+      max-width: 100%;
+    }
+    
+    /* Estilo para móvil cuando hay más de 5 tarjetas */
+    #seleccionadas.mas-de-5 .card {
+      flex-direction: column;
+      align-items: center;
+      padding: 8px;
+    }
+    
+    #seleccionadas.mas-de-5 .fila {
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    #seleccionadas.mas-de-5 .fila img:first-child {
+      width: 50px;
+      height: 50px;
+    }
+    
+    #seleccionadas.mas-de-5 .nombre {
+      display: none; /* Ocultamos el nombre en móvil cuando hay más de 5 */
+    }
+    
+    #seleccionadas.mas-de-5 .fila img.arrow {
+      width: 24px;
+      height: 24px;
+    }
+    
+    /* Ocultar tarjetas más allá de las primeras 10 en móvil */
+    #seleccionadas.mas-de-5 .card:nth-child(n+11) {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <button id="randomButton" title="Mostrar 4 estratagemas aleatorias de las seleccionadas" aria-label="Mostrar 4 estratagemas aleatorias">🔄</button>
+  <div class="page-title" id="pageTitle">RULETA DE LIBERTAD</div>
+  <button id="toggleMenu" title="Abrir menú de estratagemas">☰</button>
+</header>
+
+<!-- Modal idioma -->
+<div id="langModal" role="dialog" aria-modal="true">
+  <div class="box">
+    <h2>Choose Language / Elige Idioma</h2>
+    <div>
+      <button data-lang="en" id="btnEn">🇺🇸 English</button>
+      <button data-lang="es" id="btnEs">🇪🇸 Español</button>
+    </div>
+  </div>
+</div>
+
+<!-- Panel -->
+<div id="menu" aria-hidden="false">
+  <div class="menu-header">
+    <h1 id="menuTitle">Selecciona Estratagemas</h1>
+    <div class="menu-buttons">
+      <div class="menu-buttons-row">
+        <button class="square-btn" id="closeMenu" title="Cerrar menú">☰</button>
+        <button class="square-btn" id="reopenLang" title="Cambiar idioma">🌐</button>
+      </div>
+      <div class="menu-buttons-row">
+        <button class="square-btn" id="selectAllButton" title="Seleccionar todas las estratagemas">✅</button>
+        <button class="square-btn" id="randomMenuButton" title="Mostrar 4 aleatorias de las seleccionadas">🔄</button>
+      </div>
+    </div>
+  </div>
+  <div id="categorias"></div>
+</div>
+
+<main id="seleccionadas" aria-live="polite"></main>
+
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+
+  const arrowImgs = {
+    up:   "https://static.wikia.nocookie.net/helldivers_gamepedia/images/5/51/Up_Arrow.png",
+    down: "https://static.wikia.nocookie.net/helldivers_gamepedia/images/1/13/Down_Arrow.png",
+    left: "https://static.wikia.nocookie.net/helldivers_gamepedia/images/4/4e/Left_Arrow.png",
+    right:"https://static.wikia.nocookie.net/helldivers_gamepedia/images/3/3c/Right_Arrow.png"
+  };
+
+  let estratagemas = [];   // cargado por fetch
+  let currentLang = 'es';
+  let todasSeleccionadas = false;
+  let seleccionadasIds = new Set(); // Almacena los IDs de las estratagemas seleccionadas
+
+  // refs
+  const langModal = document.getElementById('langModal');
+  const btnEn = document.getElementById('btnEn');
+  const btnEs = document.getElementById('btnEs');  
+  const reopenLang = document.getElementById('reopenLang');
+  const menu = document.getElementById('menu');
+  const categoriasDiv = document.getElementById('categorias');
+  const seleccionadas = document.getElementById('seleccionadas');
+  const toggleMenu = document.getElementById('toggleMenu');
+  const closeMenu = document.getElementById('closeMenu');
+  const randomButton = document.getElementById('randomButton');
+  const selectAllButton = document.getElementById('selectAllButton');
+  const randomMenuButton = document.getElementById('randomMenuButton');
+  const pageTitle = document.getElementById('pageTitle'); // Título de la página
+
+  // listeners del modal (seguro)
+  btnEn.addEventListener('click', ()=> chooseLang('en'));
+  btnEs.addEventListener('click', ()=> chooseLang('es'));  
+  reopenLang.addEventListener('click', ()=> { langModal.style.display = 'flex'; });
+  toggleMenu.addEventListener('click', ()=> menu.classList.toggle('hide'));
+  closeMenu.addEventListener('click', ()=> menu.classList.add('hide'));
+  randomButton.addEventListener('click', ()=> mostrarEstratagemasAleatorias(4));
+  randomMenuButton.addEventListener('click', ()=> mostrarEstratagemasAleatorias(4));
+  selectAllButton.addEventListener('click', toggleSelectAll);
+
+  // ayuda: cerrar modal con Escape
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') {
+      if(langModal.style.display === 'flex') langModal.style.display = 'none';
+      else menu.classList.add('hide'); // También cerrar menú con Escape
+    }
+  });
+
+  // funcion escoger idioma
+  function chooseLang(lang){
+    currentLang = lang;
+    langModal.style.display = 'none';
+    
+    // Actualizar título de la página
+    updatePageTitle();
+    
+    // actualiza textos si ya hay menu; si no, renderMenu() lo hará tras cargar datos
+    if(estratagemas.length) renderMenu();
+    updateSelectedNames(); // actualiza tarjetas ya creadas
+    console.log('Idioma cambiado a', currentLang);
+  }
+
+  // Actualizar título de la página según idioma
+  function updatePageTitle() {
+    pageTitle.textContent = currentLang === 'en' ? 'FREEDOM ROULETTE' : 'RULETA DE LIBERTAD';
+  }
+
+  // Mostrar 4 estratagemas aleatorias de las seleccionadas
+  function mostrarEstratagemasAleatorias(count) {
+    // Limpiar selecciones actuales mostradas
+    seleccionadas.innerHTML = '';
+    
+    if (seleccionadasIds.size === 0) {
+      alert(currentLang === 'en' ? 'No stratagems selected. Please select some first.' : 'No hay estratagemas seleccionadas. Por favor selecciona algunas primero.');
+      return;
+    }
+    
+    // Convertir Set to Array
+    const idsArray = Array.from(seleccionadasIds);
+    
+    // Si hay menos de 4 seleccionadas, usar todas
+    const numToSelect = Math.min(count, idsArray.length);
+    
+    // Seleccionar aleatoriamente
+    const randomSelection = [];
+    const availableIndices = [...idsArray];
+    
+    for (let i = 0; i < numToSelect; i++) {
+      const randomIndex = Math.floor(Math.random() * availableIndices.length);
+      const selectedId = availableIndices.splice(randomIndex, 1)[0];
+      const item = estratagemas.find(e => e.id === selectedId);
+      if (item) {
+        randomSelection.push(item);
+      }
+    }
+    
+    // Añadir las seleccionadas a la pantalla principal
+    randomSelection.forEach(item => {
+      addCardToSelection(item);
+    });
+    
+    updateGridColumns();
+	// Cerrar el menú después de aleatorizar
+	menu.classList.add('hide');
+  }
+
+  // Alternar entre seleccionar todas y deseleccionar todas
+  function toggleSelectAll() {
+    if (todasSeleccionadas) {
+      // Deseleccionar todas
+      seleccionadasIds.clear();
+      updateSelectionVisuals();
+      todasSeleccionadas = false;
+      selectAllButton.textContent = '✅';
+      selectAllButton.title = currentLang === 'en' ? 'Select all stratagems' : 'Seleccionar todas las estratagemas';
+    } else {
+      // Seleccionar todas (excepto las de misión)
+      seleccionadasIds.clear();
+      
+      estratagemas.forEach(item => {
+        const catEn = item.category.en || item.category['en'] || '';
+        if (catEn !== 'MISSION') {
+          seleccionadasIds.add(item.id);
+        }
+      });
+      
+      updateSelectionVisuals();
+      todasSeleccionadas = true;
+      selectAllButton.textContent = '❌';
+      selectAllButton.title = currentLang === 'en' ? 'Deselect all stratagems' : 'Deseleccionar todas las estratagemas';
+    }
+  }
+
+  // Actualizar indicadores visuales de selección
+  function updateSelectionVisuals() {
+    // Actualizar todas las estratagemas en el menú
+    document.querySelectorAll('.estratagema').forEach(el => {
+      const id = el.dataset.id;
+      if (seleccionadasIds.has(id)) {
+        el.classList.add('selected');
+      } else {
+        el.classList.remove('selected');
+      }
+    });
+  }
+
+  // Añadir tarjeta a la selección visual en pantalla principal
+  function addCardToSelection(item) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = item.id;
+
+    const fila = document.createElement('div');
+    fila.className = 'fila';
+
+    const icon = document.createElement('img');
+    icon.src = item.image;
+    icon.width = 60; icon.height = 60;
+    icon.alt = item.name[currentLang] || item.name.en || item.name.es || '';
+
+    const arrows = document.createElement('div');
+    (item.combo || []).forEach(dir=>{
+      const a = document.createElement('img');
+      a.className = 'arrow';
+      const src = arrowImgs[dir] || arrowImgs[dir.toLowerCase()] || '';
+      a.src = src;
+      a.alt = dir;
+      arrows.appendChild(a);
+    });
+
+    fila.appendChild(icon);
+    fila.appendChild(arrows);
+
+    const nombreDiv = document.createElement('div');
+    nombreDiv.className = 'nombre';
+    nombreDiv.textContent = item.name[currentLang] || item.name.en || item.name.es || '';
+
+    card.appendChild(fila);
+    card.appendChild(nombreDiv);
+    seleccionadas.appendChild(card);
+  }
+
+  // Cargar JSON (puedes cambiar a tu URL raw de GitHub)
+  async function cargarEstratagemas() {
+    try {
+      const url = 'https://raw.githubusercontent.com/Kart0/HD2-STRATAGEMS/refs/heads/main/estratagemas.json';
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      const data = await res.json();
+      
+      // Filtrar las estratagemas de misión
+      estratagemas = data.filter(item => {
+        const catEn = item.category.en || item.category['en'] || '';
+        return catEn !== 'MISSION';
+      });
+      
+      console.log('Estratagemas cargadas (sin misión):', estratagemas.length);
+      renderMenu();
+    } catch (err) {
+      console.error('Error cargando estratagemas.json:', err);
+    }
+  }
+
+  // Render lateral en grid
+  function renderMenu(){
+    categoriasDiv.innerHTML = '';
+    document.getElementById('menuTitle').textContent = currentLang === 'en' ? 'Select Stratagems' : 'Selecciona Estratagemas';
+
+    // Agrupar por categoría (usamos key combinada para conservar en/es)
+    const grupos = {}; // key: "en||es" -> { en:..., es:..., items: [] }
+    estratagemas.forEach(item=>{
+      const en = item.category.en || item.category['en'] || '';
+      const es = item.category.es || item.category['es'] || '';
+      const key = en + '||' + es;
+      if(!grupos[key]) grupos[key] = { en, es, items: [] };
+      grupos[key].items.push(item);
+    });
+
+    // Para mantener un orden predecible, puedes definir un orden específico:
+    const desiredOrder = [
+      'OFFENSIVE||OFENSIVAS',
+      'SUPPLY||SUMINISTROS',
+      'DEFENSIVE||DEFENSIVAS'
+    ];
+    // crear lista de keys en orden (si existen)
+    const keysOrdered = [];
+    desiredOrder.forEach(k=> { if(grupos[k]) keysOrdered.push(k); });
+    // añadir cualquier otra categoría que no esté en desiredOrder
+    Object.keys(grupos).forEach(k=>{ if(!keysOrdered.includes(k)) keysOrdered.push(k); });
+
+    // construir html
+    keysOrdered.forEach(key=>{
+      const group = grupos[key];
+      if(!group) return;
+      const catDiv = document.createElement('div');
+      catDiv.className = 'categoria';
+
+      const header = document.createElement('h2');
+      header.className = 'cat-header';
+      // Guardamos ambos nombres en data attributes
+      header.dataset.en = group.en;
+      header.dataset.es = group.es;
+      header.textContent = (currentLang === 'en' ? group.en : group.es) + ' ▾';
+
+      const content = document.createElement('div');
+      content.className = 'cat-content';
+
+      // cada item como cuadro solo imagen
+      group.items.forEach(it=>{
+        const box = document.createElement('div');
+        box.className = 'estratagema';
+        box.dataset.id = it.id;
+        box.dataset.en = it.name.en;
+        box.dataset.es = it.name.es;
+        box.dataset.img = it.image;
+        box.dataset.combo = (it.combo || []).join(',');
+
+        // Marcar como seleccionado si está en el Set
+        if (seleccionadasIds.has(it.id)) {
+          box.classList.add('selected');
+        }
+
+        const img = document.createElement('img');
+        img.className = 'icon';
+        img.src = it.image;
+        img.alt = it.name[currentLang] || it.name.en || it.name.es || '';
+        box.appendChild(img);
+
+        // al click toggleamos la selección (pero no mostramos en pantalla principal)
+        box.addEventListener('click', ()=> toggleEstratagemaSelection(it.id));
+
+        content.appendChild(box);
+      });
+
+      // plegar/desplegar
+      header.addEventListener('click', ()=>{
+        content.classList.toggle('hide');
+        const isHidden = content.classList.contains('hide');
+        header.textContent = (currentLang === 'en' ? group.en : group.es) + (isHidden ? ' ▸' : ' ▾');
+      });
+
+      catDiv.appendChild(header);
+      catDiv.appendChild(content);
+      categoriasDiv.appendChild(catDiv);
+    });
+  }
+
+  // Toggle para seleccionar/deseleccionar una estratagema
+  function toggleEstratagemaSelection(id) {
+    if (seleccionadasIds.has(id)) {
+      seleccionadasIds.delete(id);
+    } else {
+      seleccionadasIds.add(id);
+    }
+    
+    // Actualizar visualmente
+    updateSelectionVisuals();
+    
+    // Actualizar estado del botón de seleccionar todo
+    const totalEstratagemas = estratagemas.filter(e => {
+      const catEn = e.category.en || e.category['en'] || '';
+      return catEn !== 'MISSION';
+    }).length;
+    
+    todasSeleccionadas = seleccionadasIds.size === totalEstratagemas;
+    selectAllButton.textContent = todasSeleccionadas ? '❌' : '✅';
+    selectAllButton.title = todasSeleccionadas ? 
+      (currentLang === 'en' ? 'Deselect all stratagems' : 'Deseleccionar todas las estratagemas') :
+      (currentLang === 'en' ? 'Select all stratagems' : 'Seleccionar todas las estratagemas');
+  }
+
+  function updateGridColumns(){
+    const total = seleccionadas.children.length;
+    
+    // Para móviles: aplicar clases especiales cuando hay más de 5 elementos
+    if (window.innerWidth <= 768) {
+      if (total > 5) {
+        seleccionadas.classList.add('mas-de-5');
+        seleccionadas.style.gridTemplateColumns = 'repeat(2, 1fr)';
+      } else {
+        seleccionadas.classList.remove('mas-de-5');
+        seleccionadas.style.gridTemplateColumns = 'repeat(1, 1fr)';
+      }
+    } else {
+      // Para escritorio: mantener la lógica original
+      seleccionadas.classList.remove('mas-de-5');
+      const cols = Math.max(1, Math.ceil(total / 5));
+      seleccionadas.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    }
+  }
+
+  // Cuando cambia idioma, actualizar nombres de tarjetas ya creadas
+  function updateSelectedNames(){
+    if(!estratagemas.length) return;
+    document.querySelectorAll('#seleccionadas .card').forEach(card=>{
+      const id = card.dataset.id;
+      const info = estratagemas.find(x => x.id === id);
+      if(info){
+        const nuevo = info.name[currentLang] || info.name.en || info.name.es;
+        const nombreDiv = card.querySelector('.nombre');
+        if(nombreDiv) nombreDiv.textContent = nuevo;
+        // alt del icon también:
+        const icon = card.querySelector('img');
+        if(icon) icon.alt = info.name[currentLang] || icon.alt;
+      }
+    });
+  }
+
+  // Añadir listener para redimensionamiento de ventana
+  window.addEventListener('resize', updateGridColumns);
+
+  // iniciar carga
+  cargarEstratagemas();
+
+  // Debug helper
+  console.log('Interfaz lista — abre la consola (F12) si algo no carga.');
+
+});
+</script>
+</body>
+</html>
