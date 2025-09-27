@@ -271,6 +271,27 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // 👇 NUEVO: evitar desplazamiento vertical/horizontal con dos dedos
   document.addEventListener('gesturestart', e=> e.preventDefault());
 
+/* --- NUEVO: Swipe de derecha a izquierda para cerrar el menú lateral --- */
+let menuStartX = 0;
+menu.addEventListener('touchstart', e => {
+  const t = e.changedTouches[0];
+  menuStartX = t.pageX;
+});
+menu.addEventListener('touchend', e => {
+  const t  = e.changedTouches[0];
+  const dx = t.pageX - menuStartX;
+  if (dx < -50) {            // ← Swipe hacia la izquierda
+    menu.classList.add('hide');
+  }
+});
+
+document.querySelectorAll('.btn').forEach(b => {
+  b.addEventListener('click', () => {
+    if (inputLocked) return;
+    addDir(b.dataset.dir);
+  });
+});
+
   function chooseLang(lang){
     currentLang = lang;
     langModal.style.display = 'none';
